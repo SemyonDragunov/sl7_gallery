@@ -1,0 +1,24 @@
+name = Галерея
+description = Галерея изображений для сайта.
+package = SL7
+version = 7.x-1.0
+core = 7.x
+
+configure = admin/control-panel/apps/gallery
+
+files[] = includes/sl7_gallery_album.controller.inc
+files[] = includes/sl7_gallery_album.ui.inc
+files[] = includes/sl7_gallery_image.controller.inc
+files[] = includes/sl7_gallery_image.ui.inc
+files[] = views/handler/sl7_gallery_handler_sl7_gallery_album_operations.inc
+
+dependencies[] = sl7_control_panel
+dependencies[] = entity
+dependencies[] = entity:entity_token
+dependencies[] = entitycache
+dependencies[] = views
+dependencies[] = ctools
+dependencies[] = colorbox
+dependencies[] = contextual
+dependencies[] = image
+dependencies[] = path_breadcrumbs

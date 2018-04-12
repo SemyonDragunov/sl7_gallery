@@ -1,0 +1,348 @@
+<?php
+
+/**
+ * @author Semyon Dragunov <sam.dragunov@gmail.com>
+ * https://github.com/SemyonDragunov
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function sl7_gallery_schema() {
+
+  $schema['sl7_gallery_image'] = array(
+    'description'  => 'The base table for sl7_gallery_image entities.',
+    'fields'       => array(
+      'iid'     => array(
+        'description' => 'Primary Key: Image ID.',
+        'type'        => 'serial',
+        'unsigned'    => TRUE,
+        'not null'    => TRUE,
+      ),
+      'cover'     => array(
+        'description' => 'The boolean option cover of album.',
+        'type'        => 'int',
+        'size'        => 'tiny',
+        'unsigned'    => TRUE,
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
+      'aid'     => array(
+        'description' => 'The {sl7_gallery_image}.aid reference.',
+        'type'        => 'int',
+        'unsigned'    => TRUE,
+        'not null'    => TRUE,
+      ),
+      'uid'     => array(
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'unsigned'    => TRUE,
+        'default'     => 0,
+        'description' => 'The {users}.uid that create this image; initially, this is the user that created it.',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the order was created.',
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the order was most recently saved.',
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
+    ),
+    'indexes'      => array(
+      'iid' => array('iid'),
+      'aid' => array('aid'),
+      'uid' => array('uid'),
+      'created' => array('created'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table'   => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+      'sl7_gallery_album' => array(
+        'table' => 'sl7_gallery_album',
+        'columns' => array('aid' => 'aid'),
+      ),
+    ),
+    'primary key'  => array('iid'),
+  );
+
+  $schema['sl7_gallery_album'] = array(
+    'description' => 'The base table for sl7_gallery_album entities.',
+    'fields' => array(
+      'aid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'description' => 'Primary Key: Album ID.',
+      ),
+      'label' => array(
+        'type' => 'varchar',
+        'not null' => TRUE,
+        'length' => 255,
+        'description' => 'Title of item.',
+      ),
+      'uid'     => array(
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'unsigned'    => TRUE,
+        'default'     => 0,
+        'description' => 'The {users}.uid that create this album; initially, this is the user that created it.',
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the order was created.',
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the order was most recently saved.',
+        'type'        => 'int',
+        'not null'    => TRUE,
+        'default'     => 0,
+      ),
+    ),
+    'indexes' => array(
+      'aid' => array('aid'),
+      'uid' => array('uid'),
+      'created' => array('created'),
+    ),
+    'foreign keys' => array(
+      'users' => array(
+        'table'   => 'users',
+        'columns' => array('uid' => 'uid'),
+      ),
+    ),
+    'primary key' => array('aid'),
+  );
+
+  // Optional cache table for entitycache support.
+  $schema['cache_entity_sl7_gallery_image'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_entity_sl7_gallery_image']['description'] = 'Cache table used to sl7_gallery_image entity records.';
+  $schema['cache_entity_sl7_gallery_album'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_entity_sl7_gallery_album']['description'] = 'Cache table used to sl7_gallery_album entity records.';
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function sl7_gallery_install() {
+
+  // Add foreign key BD level.
+  db_query('
+    ALTER TABLE {sl7_gallery_image}
+    ADD CONSTRAINT {sl7_gallery_album}
+    FOREIGN KEY (aid) REFERENCES {sl7_gallery_album} (aid)
+    ON DELETE CASCADE
+  ');
+
+  // Добавляем права.
+  if ($role_manager = user_role_load_by_name('manager')) {
+    $editor_permissions = array(
+      'sl7_gallery_album create' => TRUE,
+      'sl7_gallery_album own edit' => TRUE,
+      'sl7_gallery_album own delete' => TRUE,
+      'sl7_gallery_image create' => TRUE,
+      'sl7_gallery_image own edit' => TRUE,
+      'sl7_gallery_image own delete' => TRUE,
+    );
+    user_role_change_permissions($role_manager->rid, $editor_permissions);
+  }
+  user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('sl7_gallery view'));
+  user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('sl7_gallery view'));
+
+  // Set path breadcrumbs settings.
+  variable_set('path_breadcrumbs_home_link_title', 'Главная');
+
+  // Create fields
+  $fields = array(
+    array(
+      'field_name' => 'sl7_gallery_image',
+      'type' => 'image',
+      'cardinality' => 1,
+      'module' => 'image',
+      'locked' => TRUE,
+      'settings' => array(
+        'uri_scheme' => 'public',
+        'default_image' => 0,
+      ),
+      'foreign keys' => array(
+        'fid' => array(
+          'columns' => array(
+            'fid' => 'fid',
+          ),
+          'table' => 'file_managed',
+        ),
+      ),
+      'indexes' => array(
+        'fid' => array(
+          0 => 'fid',
+        ),
+      ),
+    ),
+    array(
+      'field_name' => 'sl7_gallery_body',
+      'type' => 'text_long',
+      'cardinality' => 1,
+      'translatable' => '1',
+      'module' => 'text',
+      'locked' => TRUE,
+      'foreign keys' => array(
+        'format' => array(
+          'columns' => array(
+            'format' => 'format',
+          ),
+          'table' => 'filter_format',
+        ),
+      ),
+      'indexes' => array(
+        'format' => array(
+          0 => 'format',
+        ),
+      ),
+    ),
+  );
+  foreach ($fields as $field) {
+    $exists = db_query("SELECT id FROM {field_config} WHERE field_name=:field_name", array(':field_name' => $field['field_name']))->fetchField();
+    if (!$exists) {
+      field_create_field($field);
+    }
+  }
+
+  // Create instances for fields
+  $instances = array(
+    array(
+      'field_name' => 'sl7_gallery_image',
+      'entity_type' => 'sl7_gallery_image',
+      'bundle' => 'sl7_gallery_image',
+      'required' => TRUE,
+      'label' => 'Изображение',
+      'settings' => array(
+        'max_filesize' => 1024*1024*5,
+        'file_extensions' => 'png gif jpg jpeg',
+        'file_directory' => 'sl7_gallery',
+      ),
+      'widget' => array(
+        'type' => 'image_image',
+        'module' => 'image',
+        'weight' => 2,
+      ),
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'type' => 'image',
+          'settings' => array(
+            'image_style' => 'thumbnail'
+          ),
+          'weight' => 2,
+        ),
+      ),
+    ),
+    array(
+      'field_name' => 'sl7_gallery_body',
+      'entity_type' => 'sl7_gallery_album',
+      'bundle' => 'sl7_gallery_album',
+      'label' => 'Описание',
+      'format' => 'plain_text',
+      'widget' => array(
+        'settings' => array(
+          'rows' => '5',
+        ),
+        'type' => 'text_textarea',
+        'weight' => 3,
+      ),
+      'type' => 'text_long',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => 3,
+        ),
+      ),
+      'settings' => array(
+        'text_processing' => 0,
+        'user_register_form' => FALSE,
+      ),
+    ),
+    array(
+      'field_name' => 'sl7_gallery_body',
+      'entity_type' => 'sl7_gallery_image',
+      'bundle' => 'sl7_gallery_image',
+      'label' => 'Описание',
+      'format' => 'plain_text',
+      'widget' => array(
+        'settings' => array(
+          'rows' => 5,
+        ),
+        'type' => 'text_textarea',
+        'weight' => 3,
+      ),
+      'type' => 'text_long',
+      'display' => array(
+        'default' => array(
+          'label' => 'hidden',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => 3,
+        ),
+      ),
+      'settings' => array(
+        'text_processing' => 0,
+        'user_register_form' => FALSE,
+      ),
+    ),
+  );
+  foreach ($instances as $instance) {
+    $exists = db_query("SELECT id FROM {field_config_instance} WHERE field_name=:field_name AND entity_type=:entity_type AND bundle=:bundle", array(':field_name' => $instance['field_name'], ':entity_type' => $instance['entity_type'], ':bundle' => $instance['bundle']))->fetchField();
+    if (!$exists) {
+      field_create_instance($instance);
+    }
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function sl7_gallery_uninstall() {
+
+  db_query('
+    ALTER TABLE {sl7_gallery_image}
+    DROP FOREIGN KEY {sl7_gallery_album}
+  ');
+
+  // Удаление полей
+  field_attach_delete_bundle('sl7_gallery_album', 'sl7_gallery_album');
+  field_attach_delete_bundle('sl7_gallery_image', 'sl7_gallery_image');
+  db_delete('field_config_instance')->condition('entity_type', 'sl7_gallery_album')->execute();
+  db_delete('field_config_instance')->condition('entity_type', 'sl7_gallery_image')->execute();
+  db_delete('field_config')->condition('field_name', 'sl7_gallery_%', 'LIKE')->execute();
+
+  // Удаление views
+  $views = array(
+    'sl7_gallery_image',
+    'sl7_gallery_album',
+  );
+  foreach ($views as $name) {
+    if ($view = views_get_view($name)) {
+      $view->delete();
+    }
+  }
+
+  $result = db_select('variable', 'v')
+    ->fields('v', array('name'))
+    ->condition('name', 'sl7_gallery_%', 'LIKE')
+    ->execute();
+  foreach ($result as $row) {
+    variable_del($row->name);
+  }
+
+  field_purge_batch(1000);
+}

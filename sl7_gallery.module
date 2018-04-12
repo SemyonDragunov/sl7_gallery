@@ -1,0 +1,376 @@
+<?php
+
+/**
+ * @file
+ * Apps SL7 Gallery.
+ * 
+ * @author Semyon Dragunov <sam.dragunov@gmail.com>
+ * https://github.com/SemyonDragunov
+ */
+
+define('SL7_GALLERY_ALBUM_PATH', 'gallery');
+define('SL7_GALLERY_ADMIN_PATH', SL7_CONTROL_PANEL_ADMIN_PATH . '/apps/gallery');
+define('SL7_GALLERY_IMAGE_PATH', SL7_GALLERY_ALBUM_PATH . '/image');
+
+require_once(__DIR__ . '/includes/sl7_gallery_album.api.inc');
+require_once(__DIR__ . '/includes/sl7_gallery_image.api.inc');
+
+/**
+ * Implement hook_menu().
+ */
+function sl7_gallery_menu() {
+
+  $items[SL7_GALLERY_ADMIN_PATH . '/manage'] = array(
+    'title' => 'Галерея',
+    'description' => 'Управление галереей.',
+    'page callback'    => 'views_embed_view',
+    'page arguments'   => array('sl7_gallery_album', 'manage_page'),
+    'access arguments' => array('administer sl7_gallery'),
+    'type'             => MENU_NORMAL_ITEM,
+    'menu_name' => 'sl7-control-panel',
+    'weight'           => -20,
+  );
+
+  $items[SL7_GALLERY_ADMIN_PATH . '/manage/view'] = array(
+    'title'  => 'Список',
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items[SL7_GALLERY_ADMIN_PATH . '/manage/add'] = array(
+    'title' => 'Создать альбом',
+    'description' => 'Создать альбом.',
+    'page callback'    => 'sl7_gallery_album_get_edit_form',
+    'page arguments'   => array('create', NULL),
+    'access callback'  => 'sl7_gallery_album_access',
+    'access arguments' => array('create'),
+    'type'             => MENU_LOCAL_TASK,
+    'weight'           => -9,
+    'file'             => 'sl7_gallery_album.ui.inc',
+    'file path'        => drupal_get_path('module', 'sl7_gallery') . '/includes',
+  );
+
+  return $items;
+}
+
+/**
+ * Implement hook_entity_info().
+ */
+function sl7_gallery_entity_info() {
+
+  $return['sl7_gallery_image'] = array(
+    'label' => 'Галерея - изображение',
+    'entity class' => 'SL7GalleryImage',
+    'controller class' => 'SL7GalleryImageController',
+    'metadata controller class' => 'SL7GalleryImageMetadataController',
+    'base table' => 'sl7_gallery_image',
+    'fieldable' => TRUE,
+    'static cache' => TRUE,
+    'label callback' => 'entity_class_label',
+    'uri callback' => 'entity_class_uri',
+    'creation callback' => 'sl7_gallery_image_create',
+    'access callback' => 'sl7_gallery_image_access',
+    'load hook' => 'sl7_gallery_image_load',
+    'module' => 'sl7_gallery',
+    'entity keys' => array(
+      'id' => 'iid',
+    ),
+    'admin ui' => array(
+      'path' => SL7_GALLERY_IMAGE_PATH,
+      'file' => 'includes/sl7_gallery_image.ui.inc',
+      'controller class' => 'SL7GalleryImageUIController',
+      'menu wildcard' => '%sl7_gallery_image',
+    ),
+    'view modes' => array(
+      'teaser' => array(
+        'label' => 'Анонс',
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  $return['sl7_gallery_album'] = array(
+    'label' => 'Галерея - альбом',
+    'entity class' => 'SL7GalleryAlbum',
+    'controller class' => 'SL7GalleryAlbumController',
+    'metadata controller class' => 'SL7GalleryAlbumMetadataController',
+    'views controller class' => 'SL7GalleryAlbumViewsController',
+    'base table' => 'sl7_gallery_album',
+    'fieldable' => TRUE,
+    'static cache' => TRUE,
+    'label callback' => 'entity_class_label',
+    'uri callback' => 'entity_class_uri',
+    'creation callback' => 'sl7_gallery_album_create',
+    'access callback' => 'sl7_gallery_album_access',
+    'load hook' => 'sl7_gallery_album_load',
+    'module' => 'sl7_gallery',
+    'entity keys' => array(
+      'id' => 'aid',
+      'label' => 'label',
+    ),
+    'admin ui' => array(
+      'path' => SL7_GALLERY_ALBUM_PATH,
+      'file' => 'includes/sl7_gallery_album.ui.inc',
+      'controller class' => 'SL7GalleryAlbumUIController',
+      'menu wildcard' => '%sl7_gallery_album',
+    ),
+    'bundles' => array(
+      'sl7_gallery_album' => array(
+        'label' => 'Альбом',
+        'admin' => array(
+          'path' => SL7_GALLERY_ADMIN_PATH . '/manage',
+          'access callback' => 'user_access',
+          'access arguments' => array('administer sl7_gallery'),
+        ),
+      ),
+    ),
+    'view modes' => array(
+      'teaser' => array(
+        'label' => 'Анонс',
+        'custom settings' => FALSE,
+      ),
+    ),
+  );
+
+  if (module_exists('entitycache')) {
+    $return['sl7_gallery_image']['field cache'] = FALSE;
+    $return['sl7_gallery_image']['entity cache'] = TRUE;
+    $return['sl7_gallery_album']['field cache'] = FALSE;
+    $return['sl7_gallery_album']['entity cache'] = TRUE;
+  }
+
+  return $return;
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function sl7_gallery_flush_caches() {
+  return array(
+    'cache_entity_sl7_gallery_image',
+    'cache_entity_sl7_gallery_album',
+  );
+}
+
+/**
+ * Implement hook_permission().
+ */
+function sl7_gallery_permission() {
+  return array(
+    'administer sl7_gallery' => array('title' => 'Администрирование галерей'),
+    'sl7_gallery view' => array('title' => 'Просмотр галерей'),
+    'sl7_gallery_album create' => array('title' => 'Создание альбома'),
+    'sl7_gallery_album any edit' => array('title' => 'Редактирование любых альбомов'),
+    'sl7_gallery_album own edit' => array('title' => 'Редактирование своих альбомов'),
+    'sl7_gallery_album any delete' => array('title' => 'Удаление любых альбомов'),
+    'sl7_gallery_album own delete' => array('title' => 'Удаление своих альбомов'),
+    'sl7_gallery_image create' => array('title' => 'Создание изображения'),
+    'sl7_gallery_image any edit' => array('title' => 'Редактирование любых изображений'),
+    'sl7_gallery_image own edit' => array('title' => 'Редактирование своих изображений'),
+    'sl7_gallery_image any delete' => array('title' => 'Удаление любых изображений'),
+    'sl7_gallery_image own delete' => array('title' => 'Удаление своих изображений'),
+  );
+}
+
+/**
+ * Implement hook_admin_paths().
+ */
+function sl7_gallery_admin_paths() {
+  $paths = array(
+    SL7_GALLERY_ALBUM_PATH . '/add' => TRUE,
+    SL7_GALLERY_ALBUM_PATH . '/*/edit' => TRUE,
+    SL7_GALLERY_ALBUM_PATH . '/*/delete' => TRUE,
+    SL7_GALLERY_ALBUM_PATH . '/*/add' => TRUE,
+    SL7_GALLERY_IMAGE_PATH . '/*/edit' => TRUE,
+    SL7_GALLERY_IMAGE_PATH . '/*/delete' => TRUE,
+  );
+
+  return $paths;
+}
+
+/**
+ * Implement hook_theme().
+ */
+function sl7_gallery_theme() {
+  $items = array(
+    'sl7_gallery_image__teaser' => array(
+      'variables' => array('element' => null),
+      'template' => 'templates/sl7-gallery-image--teaser',
+    ),
+    'sl7_gallery_album__teaser' => array(
+      'variables' => array('element' => null),
+      'template' => 'templates/sl7-gallery-album--teaser',
+    ),
+  );
+
+  foreach ($items as &$item) {
+    if (!isset($item['file'])) {
+      $item['file'] = 'templates/theme.inc';
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implements template_preprocess_field().
+ */
+function sl7_gallery_preprocess_field(&$vars) {
+  if ($vars['element']['#field_name'] == 'sl7_gallery_body') {
+    $vars['items'][0]['#markup'] = '<p>' . $vars['items'][0]['#markup'] . '</p>';
+  }
+}
+
+/**
+ * Implementation of hook_image_default_styles().
+ */
+function sl7_gallery_image_default_styles() {
+  $styles = array();
+
+  $styles['sl7_gallery_image'] = array(
+    'label' => 'Галерея - изображение',
+    'effects' => array(
+      array(
+        'name' => 'image_scale_and_crop',
+        'data' => array('width' => 400, 'height' => 300),
+        'weight' => '0',
+      ),
+    ),
+  );
+  $styles['sl7_gallery_album'] = array(
+    'label' => 'Галерея - альбом',
+    'effects' => array(
+      array(
+        'name' => 'image_scale_and_crop',
+        'data' => array('width' => 600, 'height' => 500),
+        'weight' => '0',
+      ),
+    ),
+  );
+
+  return $styles;
+}
+
+function sl7_gallery_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'sl7_gallery') . '/views',
+    'template path' => drupal_get_path('module', 'sl7_gallery') . '/templates',
+  );
+}
+
+/**
+ * Implements hook_views_default_views().
+ **/
+function sl7_gallery_views_default_views() {
+  $files = file_scan_directory(drupal_get_path('module', 'sl7_gallery'). '/views', '/.view.inc/');
+  foreach ($files as $filepath => $file) {
+    require $filepath;
+    if (isset($view)) {
+      $views[$view->name] = $view;
+    }
+  }
+
+  if ($views) {
+    return $views;
+  }
+}
+
+/**
+ * Implementation of hook_ctools_plugin_api().
+ */
+function sl7_gallery_ctools_plugin_api($owner, $api) {
+  if ($owner == 'path_breadcrumbs' && $api == 'path_breadcrumbs') {
+    return array('version' => 1);
+  }
+}
+
+function sl7_gallery_path_breadcrumbs_settings_info() {
+  $export = array();
+
+  $path_breadcrumb = new stdClass();
+  $path_breadcrumb->api_version = 1;
+  $path_breadcrumb->machine_name = 'sl7_gallery_album';
+  $path_breadcrumb->name = 'Галерея - альбомы';
+  $path_breadcrumb->path = 'gallery/%album';
+  $path_breadcrumb->data = array(
+    'titles' => array(
+      0 => 'Галерея',
+      1 => '%album:label',
+    ),
+    'paths' => array(
+      0 => 'gallery',
+      1 => '<none>',
+    ),
+    'home' => 1,
+    'translatable' => 0,
+    'arguments' => array(
+      'album' => array(
+        'position' => 1,
+        'argument' => 'entity_id:sl7_gallery_album',
+        'settings' => array(
+          'identifier' => 'Галерея - альбом: ID',
+        ),
+      ),
+    ),
+    'access' => array(),
+  );
+  $path_breadcrumb->weight = 0;
+  $export['sl7_gallery_album'] = $path_breadcrumb;
+
+  $path_breadcrumb = new stdClass();
+  $path_breadcrumb->api_version = 1;
+  $path_breadcrumb->machine_name = 'sl7_gallery_front';
+  $path_breadcrumb->name = 'Галерея - главная';
+  $path_breadcrumb->path = 'gallery';
+  $path_breadcrumb->data = array(
+    'titles' => array(
+      0 => '!page_title',
+    ),
+    'paths' => array(
+      0 => '<none>',
+    ),
+    'home' => 1,
+    'translatable' => 0,
+    'arguments' => array(),
+    'access' => array(),
+  );
+  $path_breadcrumb->weight = 0;
+  $export['sl7_gallery_front'] = $path_breadcrumb;
+
+  return $export;
+}
+
+/**
+ * Implement hook_preprocess_html().
+ */
+function sl7_gallery_preprocess_html(&$variables) {
+  // Установка meta tags на страницу альбома.
+  if (arg(0) == 'gallery' && is_numeric(arg(1)) && !arg(2)) {
+    $images = sl7_gallery_album_get_images(arg(1));
+    if (isset($images) && !empty($images)) {
+      $album = current($variables['page']['content']['system_main']['sl7_gallery_album']);
+      $description = truncate_utf8(check_plain(strip_tags($album['sl7_gallery_body']['#items'][0]['value'])), 150, FALSE, TRUE);
+      $cover = sl7_gallery_album_get_cover(arg(1));
+      $image_url = file_create_url($cover->sl7_gallery_image['und'][0]['uri']);
+
+      drupal_add_html_head(array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'name' => 'description',
+          'content' => $description,
+        )
+      ), 'description');
+
+      drupal_add_html_head(array(
+        '#type' => 'html_tag',
+        '#tag' => 'link',
+        '#attributes' => array(
+          'rel' => 'image_src',
+          'href' => $image_url,
+        )
+      ), 'image_src');
+    }
+  }
+}
