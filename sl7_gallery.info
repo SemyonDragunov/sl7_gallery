@@ -1,10 +1,10 @@
 name = Галерея
 description = Галерея изображений для сайта.
-package = SL7
+package = Druta
 version = 7.x-1.0
 core = 7.x
 
-configure = admin/control-panel/apps/gallery
+configure = control-panel/apps/gallery
 
 files[] = includes/sl7_gallery_album.controller.inc
 files[] = includes/sl7_gallery_album.ui.inc

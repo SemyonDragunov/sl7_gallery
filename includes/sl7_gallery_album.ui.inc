@@ -1,11 +1,6 @@
 <?php
 
 /**
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
- */
-
-/**
  * UI controller for sl7_gallery_album.
  */
 class SL7GalleryAlbumUIController extends EntityDefaultUIController {

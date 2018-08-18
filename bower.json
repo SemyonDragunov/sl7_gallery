@@ -3,10 +3,10 @@
   "version": "1.0",
   "description": "SL7 gallery",
   "authors": [
-    "Semyon Dragunov <sam.dragunov@gmail.com>"
+    "SAM <sam@sl-7.ru>"
   ],
-  "license": "Apache License 2.0",
-  "homepage": "https://github.com/SemyonDragunov/sl7_gallery",
+  "license": "SL7 ASL",
+  "homepage": "https://druta.ru",
   "ignore": [
     "**/.*",
     "node_modules",

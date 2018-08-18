@@ -3,9 +3,6 @@
 /**
  * @file
  * Apps SL7 Gallery.
- * 
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
  */
 
 define('SL7_GALLERY_ALBUM_PATH', 'gallery');
@@ -27,7 +24,6 @@ function sl7_gallery_menu() {
     'page arguments'   => array('sl7_gallery_album', 'manage_page'),
     'access arguments' => array('administer sl7_gallery'),
     'type'             => MENU_NORMAL_ITEM,
-    'menu_name' => 'sl7-control-panel',
     'weight'           => -20,
   );
 

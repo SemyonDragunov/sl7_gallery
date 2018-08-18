@@ -1,11 +1,6 @@
 <?php
 
 /**
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
- */
-
-/**
  * Implements hook_schema().
  */
 function sl7_gallery_schema() {

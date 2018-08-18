@@ -1,11 +1,6 @@
 <?php
 
 /**
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
- */
-
-/**
  * Class sl7_gallery_album entities.
  */
 class SL7GalleryAlbum extends Entity {
@@ -123,7 +118,7 @@ class SL7GalleryAlbumMetadataController extends EntityDefaultMetadataController 
 }
 
 /**
- * Views controller for sl7_event entities.
+ * Views controller for sl7_gallery_album entities.
  */
 class SL7GalleryAlbumViewsController extends EntityDefaultViewsController {
 

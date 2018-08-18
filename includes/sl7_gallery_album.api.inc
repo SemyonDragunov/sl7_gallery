@@ -3,9 +3,6 @@
 /**
  * @file
  * sl7_gallery_album API.
- * 
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
  */
 
 function sl7_gallery_album_access($op, $album = NULL, $account = NULL) {

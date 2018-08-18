@@ -1,11 +1,6 @@
 <?php
 
 /**
- * @author Semyon Dragunov <sam.dragunov@gmail.com>
- * https://github.com/SemyonDragunov
- */
-
-/**
  * Class sl7_gallery_image entities.
  */
 class SL7GalleryImage extends Entity {
